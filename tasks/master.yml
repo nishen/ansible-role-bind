@@ -5,9 +5,9 @@
 - name: Master | Main BIND config file (master)
   template:
     src: master_etc_named.conf.j2
-    dest: "{{ bind_config }}"
-    owner: "{{ bind_owner }}"
-    group: "{{ bind_group }}"
+    dest: "/etc/named.conf"
+    owner: root
+    group: named
     mode: '0640'
     setype: named_conf_t
     validate: 'named-checkconf %s'
@@ -17,25 +17,26 @@
 - name: Master | Create forward lookup zone file
   template:
     src: bind_zone.j2
-    dest: "{{ bind_dir }}/{{ bind_zone_name }}"
-    owner: "{{ bind_owner }}"
-    group: "{{ bind_group }}"
+    dest: "/var/named/{{ item.bind_zone_name }}"
+    owner: root
+    group: named
     mode: "0640"
     setype: named_zone_t
-    validate: 'named-checkzone -d {{ bind_zone_name }} %s'
+    validate: 'named-checkzone -d {{ item.bind_zone_name }} %s'
+  with_items: "{{ bind_zones }}"
   notify: restart bind
   tags: bind
 
 - name: Master | Create reverse lookup zone file
   template:
     src: reverse_zone.j2
-    dest: "{{ bind_dir }}/{{ item|reverse_lookup_zone }}"
-    owner: "{{ bind_owner }}"
-    group: "{{ bind_group }}"
+    dest: "/var/named/{{ item|reverse_lookup_zone }}"
+    owner: root
+    group: named
     mode: "0640"
     setype: named_zone_t
     validate: "named-checkzone {{ item|reverse_lookup_zone }} %s"
-  with_items: "{{ bind_zone_networks }}"
+  with_items: "{{ bind_zones | json_query('[*].bind_zone_networks[]') | unique }}"
   notify: restart bind
   tags: bind
 

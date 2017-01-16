@@ -1,26 +1,21 @@
 //
-// named.conf 
+// named.conf | slave
 //
 // {{ ansible_managed }}
 //
-{% for acl in bind_acls %}
-acl "{{ acl.name }}" {
-{% for match in acl.match_list %}
-  {{ match }};
-{% endfor %}
-};
-
-{% endfor %}
 options {
-	listen-on port 53 { {{ bind_listen_ipv4|join(';') }}; };
-	listen-on-v6 port 53 { {{ bind_listen_ipv6|join(';') }}; };
-	directory 	"{{ bind_dir }}";
-	dump-file 	"{{ bind_dir }}/data/cache_dump.db";
-	statistics-file "{{ bind_dir }}/data/named_stats.txt";
-	memstatistics-file "{{ bind_dir }}/data/named_mem_stats.txt";
-	allow-query     { {{ bind_allow_query|join(';') }}; };
-{% if bind_acls|length != 0 %}
-	allow-transfer  { {% for acl in bind_acls %}"{{ acl.name }}"; {% endfor %}};
+	listen-on port 53 { {{ bind_listen_ipv4|join('; ') }}; };
+	listen-on-v6 port 53 { {{ bind_listen_ipv6|join('; ') }}; };
+	directory 	"/var/named";
+	dump-file 	"/var/named/data/cache_dump.db";
+	statistics-file "/var/named/data/named_stats.txt";
+	memstatistics-file "/var/named/data/named_mem_stats.txt";
+{% if bind_allow_query|length > 0 %}
+	allow-query       { {{ bind_allow_query|join('; ') }}; };
+	allow-query-cache  { {{ bind_allow_query|join('; ') }}; };
+{% endif %}
+{% if bind_allow_transfer|length > 0 %}
+	allow-transfer  { {{ bind_allow_transfer|join('; ') }}; };
 {% endif %}
 
 	recursion no;
@@ -34,7 +29,7 @@ options {
 	/* Path to ISC DLV key */
 	bindkeys-file "/etc/named.iscdlv.key";
 
-	managed-keys-directory "{{ bind_dir }}/dynamic";
+	managed-keys-directory "/var/named/dynamic";
 
 	pid-file "/run/named/named.pid";
 	session-keyfile "/run/named/session.key";
@@ -42,27 +37,39 @@ options {
 
 logging {
         channel default_debug {
-                file "data/named.run";
+                file "{{ bind_log }}";
                 severity dynamic;
+                print-time yes;
         };
 };
 
-{% for file in bind_default_zone_files %}
-include "{{ file }}";
-{% endfor %}
-
-zone "{{ bind_zone_name }}" IN {
-  type slave;
-  masters { {{ bind_zone_master_server_ip }}; };
-  file "{{ bind_zone_name }}";
+zone "." IN {
+	type hint;
+	file "named.ca";
 };
 
-{% if bind_zone_networks is defined %}
-{% for network in bind_zone_networks %}
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";
+
+{% set ips = [] %}
+{% for bz in bind_zones %}
+zone "{{ bz.bind_zone_name }}" IN {
+        type slave;
+        masters { {{ bind_zone_master_server_ip }}; };
+        file "slaves/{{ bz.bind_zone_name }}";
+};
+
+{% if bz.bind_zone_networks is defined %}
+{% for network in bz.bind_zone_networks %}
+{% if network not in ips %}
+{% set _ = ips.append(network) %}
 zone "{{ network|reverse_lookup_zone }}" IN {
-  type slave;
-  masters { {{ bind_zone_master_server_ip }}; };
-  file "{{ network|reverse_lookup_zone }}";
+        type slave;
+        masters { {{ bind_zone_master_server_ip }}; };
+        file "slaves/{{ network|reverse_lookup_zone }}";
 };
+{% endif %}
 {% endfor %}
 {% endif %}
+{% endfor %}
+

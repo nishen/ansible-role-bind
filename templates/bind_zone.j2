@@ -1,13 +1,13 @@
-; Zone file for {{ bind_zone_name }}
+; Zone file for {{ item.bind_zone_name }}
 ; {{ ansible_managed }}
 
-$ORIGIN {{ bind_zone_name }}.
+$ORIGIN {{ item.bind_zone_name }}.
 $TTL {{ bind_zone_ttl }}
 
-{% if bind_zone_name_servers|length > 0 %}
-@ IN SOA {{ bind_zone_name_servers|first }}.{{ bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ bind_zone_name }}. (
+{% if item.bind_zone_name_servers|length > 0 %}
+@ IN SOA {{ item.bind_zone_name_servers|first }}.{{ item.bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ item.bind_zone_name }}. (
 {% else %}
-@ IN SOA {{ ansible_hostname }}.{{ bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ bind_zone_name }}. (
+@ IN SOA {{ ansible_hostname }}.{{ item.bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ item.bind_zone_name }}. (
 {% endif %}
   {{ timestamp.stdout }}
   {{ bind_zone_time_to_refresh }}
@@ -15,23 +15,23 @@ $TTL {{ bind_zone_ttl }}
   {{ bind_zone_time_to_expire }}
   {{ bind_zone_minimum_ttl }} )
 
-{% if bind_zone_name_servers|length > 0 %}
-{% for ns in bind_zone_name_servers %}
-                     IN  NS     {{ ns }}.{{ bind_zone_name }}.
+{% if item.bind_zone_name_servers|length > 0 %}
+{% for ns in item.bind_zone_name_servers %}
+                     IN  NS     {{ ns }}.{{ item.bind_zone_name }}.
 {% endfor %}
-{% else %}
-                     IN  NS     {{ ansible_hostname }}.{{ bind_zone_name }}.
 {% endif %}
-{% for ns in bind_other_name_servers %}
+{% for ns in item.bind_other_name_servers %}
                      IN  NS     {{ ns }}.
 {% endfor %}
 
-{% for mail in bind_zone_mail_servers %}
-{% if loop.first %}@{% else %} {% endif %}                    IN  MX     {{ mail.preference}}  {{ mail.name }}.{{ bind_zone_name }}.
+{% if item.bind_zone_mail_servers is defined %}
+{% for mail in item.bind_zone_mail_servers %}
+{% if loop.first %}@{% else %} {% endif %}                    IN  MX     {{ mail.preference}}  {{ mail.name }}.{{ item.bind_zone_name }}.
 {% endfor %}
+{% endif %}
 
-{% if bind_zone_hosts|length > 0 %}
-{% for host in bind_zone_hosts %}
+{% if item.bind_zone_hosts|length > 0 %}
+{% for host in item.bind_zone_hosts %}
 {% if host.ip is string %}
 {{ host.name.ljust(20) }} IN  A      {{ host.ip }}
 {% else %}
@@ -57,11 +57,13 @@ $TTL {{ bind_zone_ttl }}
 {% else %}
 {{ ansible_hostname.ljust(20) }} IN A     {{ ansible_default_ipv4.address }}
 {% endif %}
-{% for service in bind_zone_services %}
+{% if item.bind_zone_services is defined %}
+{% for service in item.bind_zone_services %}
 {{ service.name.ljust(20) }} IN  SRV    {{ service.priority|default('0') }} {{ service.weight|default('0') }} {{ service.port }} {{ service.target }}
 {% endfor %}
-{% for text in bind_zone_text %}
+{% endif %}
+{% if item.bind_zone_text is defined %}
+{% for text in item.bind_zone_text %}
 {{ text.name.ljust(20) }} IN  TXT    "{{ text.text }}"
 {% endfor %}
-{# vim: ft=text
-#}
+{% endif %}
