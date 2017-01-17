@@ -54,6 +54,14 @@ include "/etc/named.root.key";
 
 {% set ips = [] %}
 {% for bz in bind_zones %}
+{% if bz.bind_zone_forwarders is defined and bz.bind_zone_fowarders | length > 0 %}
+zone "{{ bz.bind_zone_name }}" IN {
+	type forward;
+    forward only;
+	forwarders { "{{ bz.bind_zone_forwarders | join('; ') }}"; };
+};
+
+{% else %}
 zone "{{ bz.bind_zone_name }}" IN {
 	type master;
 	file "{{ bz.bind_zone_name }}";
@@ -81,8 +89,9 @@ zone "{{ network|reverse_lookup_zone }}" IN {
 	allow-update     { {{ bind_allow_update|join('; ') }}; };
 {% endif %}
 };
+
 {% endif %}
 {% endfor %}
 {% endif %}
-
+{% endif %}
 {% endfor %}

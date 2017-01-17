@@ -61,13 +61,14 @@ zone "{{ bz.bind_zone_name }}" IN {
 
 {% if bz.bind_zone_networks is defined %}
 {% for network in bz.bind_zone_networks %}
-{% if network not in ips %}
+{% if network not in ips and bz.bind_zone_forwarders is not defined %}
 {% set _ = ips.append(network) %}
 zone "{{ network|reverse_lookup_zone }}" IN {
         type slave;
         masters { {{ bind_zone_master_server_ip }}; };
         file "slaves/{{ network|reverse_lookup_zone }}";
 };
+
 {% endif %}
 {% endfor %}
 {% endif %}
