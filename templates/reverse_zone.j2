@@ -23,20 +23,22 @@ $ORIGIN {{ item | reverse_lookup_zone }}.
 
 {% if bz.bind_zone_name_servers | length > 0 %}
 {% for ns in bz.bind_zone_name_servers %}
-         IN  NS   {{ ns }}.
+         IN  NS   {{ ns }}.{{ bz.bind_zone_name }}.
 {% endfor %}
 {% else %}
          IN  NS   {{ ansible_hostname }}.{{ bz.bind_zone_name }}.
 {% endif %}
+{% if bz.bind_other_name_servers | length > 0 %}
 {% for ns in bz.bind_other_name_servers %}
          IN  NS   {{ ns }}.
 {% endfor %}
 {% endif %}
 {% endif %}
+{% endif %}
 {% endfor %}
 
 {% for bz in bind_zones %}
-{% if bz.bind_zone_hosts | length > 1 %}
+{% if bz.bind_zone_hosts | length > 0 %}
 {% for host in bz.bind_zone_hosts %}
 {% if host.ip == item %}
 @        IN  PTR  {{ host.name }}.{{ bz.bind_zone_name }}.

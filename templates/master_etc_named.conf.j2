@@ -13,6 +13,8 @@ options {
 {% if bind_allow_query|length > 0 %}
 	allow-query       { {{ bind_allow_query|join('; ') }}; };
 	allow-query-cache { {{ bind_allow_query|join('; ') }}; };
+{% endif %}
+{% if bind_recursion %}
 	allow-recursion   { {{ bind_allow_query|join('; ') }}; };
 {% endif %}
 {% if bind_allow_transfer|length > 0 %}
@@ -57,7 +59,7 @@ include "/etc/named.root.key";
 {% if bz.bind_zone_forwarders is defined and bz.bind_zone_fowarders | length > 0 %}
 zone "{{ bz.bind_zone_name }}" IN {
 	type forward;
-    forward only;
+	forward only;
 	forwarders { "{{ bz.bind_zone_forwarders | join('; ') }}"; };
 };
 

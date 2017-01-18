@@ -12,12 +12,30 @@
   with_items: "{{ bind_packages }}"
   tags: bind
 
+- name: Set BIND config options
+  template:
+    src: etc_sysconfig_named.j2
+    dest: "/etc/sysconfig/named"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart bind
+  tags: bind
+
+- name: Open Firewall
+  firewalld:
+    service: dns
+    permanent: true
+    state: enabled
+  tags: bind
+  notify:
+    - restart firewalld
+
 - name: Create serial
   command: date +%y%m%d%H%M
   register: timestamp
   changed_when: false
   tags: bind
-
 - include: master.yml
   when: bind_zone_master_server_ip in ansible_all_ipv4_addresses
 
@@ -30,4 +48,3 @@
     state: started
     enabled: yes
   tags: bind
-

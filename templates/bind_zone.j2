@@ -7,7 +7,7 @@ $TTL {{ bind_zone_ttl }}
 {% if item.bind_zone_name_servers|length > 0 %}
 @ IN SOA {{ item.bind_zone_name_servers|first }}.{{ item.bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ item.bind_zone_name }}. (
 {% else %}
-@ IN SOA {{ ansible_hostname }}.{{ item.bind_zone_name }}. {{ bind_zone_hostmaster_email }}.{{ item.bind_zone_name }}. (
+@ IN SOA {{ item.bind_other_name_servers | first }}. {{ bind_zone_hostmaster_email }}.{{ item.bind_zone_name }}. (
 {% endif %}
   {{ timestamp.stdout }}
   {{ bind_zone_time_to_refresh }}
@@ -20,15 +20,24 @@ $TTL {{ bind_zone_ttl }}
                      IN  NS     {{ ns }}.{{ item.bind_zone_name }}.
 {% endfor %}
 {% endif %}
+{% if item.bind_other_name_servers|length > 0 %}
 {% for ns in item.bind_other_name_servers %}
                      IN  NS     {{ ns }}.
 {% endfor %}
-
+{% endif %}
 {% if item.bind_zone_mail_servers is defined %}
 {% for mail in item.bind_zone_mail_servers %}
 {% if loop.first %}@{% else %} {% endif %}                    IN  MX     {{ mail.preference}}  {{ mail.name }}.{{ item.bind_zone_name }}.
 {% endfor %}
 {% endif %}
+
+{% if item.bind_other_name_servers|length > 0 %}
+{% for ns in item.bind_other_name_servers %}
+{{ ns }}.       IN  A     {{ hostvars[ns.split('.', 1)[0]].ip_pub }}
+{% endfor %}
+{% endif %}
+
+
 
 {% if item.bind_zone_hosts|length > 0 %}
 {% for host in item.bind_zone_hosts %}
